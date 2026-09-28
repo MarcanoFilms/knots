@@ -85,6 +85,7 @@ struct MemPoolOptions {
     bool permit_bare_pubkey{DEFAULT_PERMIT_BAREPUBKEY};
     bool permit_bare_multisig{DEFAULT_PERMIT_BAREMULTISIG};
     bool reject_parasites{DEFAULT_REJECT_PARASITES};
+    bool reject_fakemultisig{DEFAULT_REJECT_FAKEMULTISIG};
     bool reject_tokens{DEFAULT_REJECT_TOKENS};
     bool subdustfeepenalty{DEFAULT_SUBDUSTFEEPENALTY};
     bool accept_non_std_datacarrier{DEFAULT_ACCEPT_NON_STD_DATACARRIER};

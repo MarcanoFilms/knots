@@ -203,6 +203,8 @@ util::Result<void> ApplyArgsManOptions(const ArgsManager& argsman, const CChainP
 
     mempool_opts.reject_parasites = argsman.GetBoolArg("-rejectparasites", DEFAULT_REJECT_PARASITES);
 
+    mempool_opts.reject_fakemultisig = argsman.GetBoolArg("-rejectfakemultisig", DEFAULT_REJECT_FAKEMULTISIG);
+
     mempool_opts.reject_tokens = argsman.GetBoolArg("-rejecttokens", DEFAULT_REJECT_TOKENS);
 
     mempool_opts.subdustfeepenalty = argsman.GetBoolArg("-subdustfeepenalty", DEFAULT_SUBDUSTFEEPENALTY);

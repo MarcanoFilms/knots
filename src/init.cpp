@@ -767,6 +767,7 @@ void SetupServerArgs(ArgsManager& argsman, bool can_listen_ipc)
     argsman.AddArg("-minrelaytxfee=<amt>", strprintf("Fees (in %s/kvB) smaller than this are considered zero fee for relaying, mining and transaction creation (default: %s)",
         CURRENCY_UNIT, FormatMoney(DEFAULT_MIN_RELAY_TX_FEE)), ArgsManager::ALLOW_ANY, OptionsCategory::NODE_RELAY);
     argsman.AddArg("-rejectparasites", strprintf("Refuse to relay or mine parasitic overlay protocols (default: %u)", DEFAULT_REJECT_PARASITES), ArgsManager::ALLOW_ANY, OptionsCategory::NODE_RELAY);
+    argsman.AddArg("-rejectfakemultisig", strprintf("Refuse to relay or mine spends revealing a 1-of-N (N>=%u) multisig data carrier wrapped in P2SH/P2WSH (bpub/bitfiles). Threshold multisig is not affected (default: %u)", MULTISIG_DATACARRIER_MIN_KEYS, DEFAULT_REJECT_FAKEMULTISIG), ArgsManager::ALLOW_ANY, OptionsCategory::NODE_RELAY);
     argsman.AddArg("-rejecttokens",
                    strprintf("Refuse to relay or mine transactions involving non-bitcoin tokens (default: %u)",
                              DEFAULT_REJECT_TOKENS),
@@ -874,6 +875,7 @@ void InitParameterInteraction(ArgsManager& args)
         args.SoftSetArg("-permitbarepubkey", "1");
         args.SoftSetArg("-permitbaremultisig", "1");
         args.SoftSetArg("-rejectparasites", "0");
+        args.SoftSetArg("-rejectfakemultisig", "0");
         args.SoftSetArg("-rejecttokens", "0");
         args.SoftSetArg("-subdustfeepenalty", "0");
         args.SoftSetArg("-datacarriercost", "0.25");
