@@ -6,7 +6,9 @@
 #define BITCOIN_CONSENSUS_TX_VERIFY_H
 
 #include <consensus/amount.h>
+#include <consensus/consensus.h>
 
+#include <limits>
 #include <stdint.h>
 #include <vector>
 
@@ -56,11 +58,17 @@ bool CheckOutputSizes(const CTransaction& tx, TxValidationState& state);
  * @param[in] coinbase_maturity_long Maturity required by the long-maturity rule.
  * @param[in] long_maturity_start_height First coinbase height requiring coinbase_maturity_long,
  *                                      or std::numeric_limits<int>::max() to disable.
+ * @param[in] coinbase_maturity_rolling Maturity required by the rolling-maturity rule. It is
+ *                                      only ever applied as a minimum on top of the rules above.
+ * @param[in] rolling_maturity_start_height First coinbase height requiring coinbase_maturity_rolling,
+ *                                         or std::numeric_limits<int>::max() to disable.
  * Preconditions: tx.IsCoinBase() is false.
  */
 [[nodiscard]] bool CheckTxInputs(const CTransaction& tx, TxValidationState& state, const CCoinsViewCache& inputs, int nSpendHeight, CAmount& txfee, CheckTxInputsRules rules,
                                  int coinbase_maturity_long,
-                                 int long_maturity_start_height);
+                                 int long_maturity_start_height,
+                                 int coinbase_maturity_rolling = COINBASE_MATURITY,
+                                 int rolling_maturity_start_height = std::numeric_limits<int>::max());
 } // namespace Consensus
 
 /** Auxiliary functions for transaction validation (ideally should not be exposed) */

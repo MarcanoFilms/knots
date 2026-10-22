@@ -3646,7 +3646,9 @@ int CWallet::GetTxBlocksToMaturity(const CWalletTx& wtx) const
     }
     int chain_depth = GetTxDepthInMainChain(wtx);
     assert(chain_depth >= 0); // coinbase tx should not be conflicted
-    const int maturity{HaveChain() ? chain().coinbaseMaturity() : COINBASE_MATURITY};
+    // The rolling rule makes maturity depend on the height the coin was mined at.
+    const int coin_height{GetLastBlockHeight() - chain_depth + 1};
+    const int maturity{HaveChain() ? chain().coinbaseMaturity(coin_height) : COINBASE_MATURITY};
     return std::max(0, (maturity + 1) - chain_depth);
 }
 

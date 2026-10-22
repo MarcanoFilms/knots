@@ -128,6 +128,30 @@ void ReadRegTestArgs(const ArgsManager& args, CChainParams::RegTestOptions& opti
         options.coinbase_maturity_long_release_height = release_height;
     }
 
+    if (const auto arg{args.GetArg("-testcoinbasematurityrolling")}; arg) {
+        const auto values{SplitString(*arg, ':')};
+        if (values.size() != 3) {
+            throw std::runtime_error(strprintf("Invalid format (%s) for -testcoinbasematurityrolling=<start_height>:<enforce_height>:<maturity>.", *arg));
+        }
+
+        int32_t start_height;
+        int32_t enforce_height;
+        int32_t maturity;
+        if (!ParseInt32(values[0], &start_height) || start_height < 0 || start_height >= std::numeric_limits<int>::max()) {
+            throw std::runtime_error(strprintf("Invalid start height (%s) for -testcoinbasematurityrolling=<start_height>:<enforce_height>:<maturity>.", values[0]));
+        }
+        if (!ParseInt32(values[1], &enforce_height) || enforce_height < 2 || enforce_height >= std::numeric_limits<int>::max()) {
+            throw std::runtime_error(strprintf("Invalid enforce height (%s) for -testcoinbasematurityrolling=<start_height>:<enforce_height>:<maturity>.", values[1]));
+        }
+        if (!ParseInt32(values[2], &maturity) || maturity <= COINBASE_MATURITY || maturity >= std::numeric_limits<int>::max()) {
+            throw std::runtime_error(strprintf("Invalid maturity (%s) for -testcoinbasematurityrolling=<start_height>:<enforce_height>:<maturity>: must exceed COINBASE_MATURITY.", values[2]));
+        }
+
+        options.coinbase_maturity_rolling_start_height = start_height;
+        options.coinbase_maturity_rolling_enforce_height = enforce_height;
+        options.coinbase_maturity_rolling = maturity;
+    }
+
     for (const std::string& strDeployment : args.GetArgs("-vbparams")) {
         std::vector<std::string> vDeploymentParams = SplitString(strDeployment, ':');
         if (vDeploymentParams.size() < 3 || 7 < vDeploymentParams.size()) {

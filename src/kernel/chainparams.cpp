@@ -86,6 +86,17 @@ static void AddLongCoinbaseMaturityRevalidationDeployment(Consensus::Params& con
     });
 }
 
+static void AddRollingCoinbaseMaturityRevalidationDeployment(Consensus::Params& consensus)
+{
+    // No stop height: the rule never expires, so every block from the
+    // enforcement height on is checked again by an upgrading node. Blocks
+    // before it are unchanged, so a node upgrading earlier rewinds nothing.
+    consensus.chainstate_revalidation_deployments.push_back({
+        .name = "rolling_coinbase_maturity_1y",
+        .start_height = consensus.CoinbaseMaturityRollingEnforceHeight,
+    });
+}
+
 /**
  * Main network on which people trade goods and services.
  */
@@ -145,6 +156,17 @@ public:
         consensus.CoinbaseMaturityLongReleaseHeight = 979920;
         consensus.CoinbaseMaturityLong = consensus.CoinbaseMaturityLongReleaseHeight - consensus.CoinbaseMaturityLongStartHeight;
         AddLongCoinbaseMaturityRevalidationDeployment(consensus);
+
+        // Rolling coinbase maturity: every reward from the start of the long
+        // maturity window above matures over 52560 blocks (365 days of 144
+        // blocks) from its own block, with no expiry. It takes over at the
+        // window's release height, so the rewards the window holds are never
+        // released together there: one reward unlocks per block, the first at
+        // 1026000. Through 979919 the rules are unchanged.
+        consensus.CoinbaseMaturityRollingStartHeight = consensus.CoinbaseMaturityLongStartHeight;
+        consensus.CoinbaseMaturityRollingEnforceHeight = consensus.CoinbaseMaturityLongReleaseHeight;
+        consensus.CoinbaseMaturityRolling = 52560;
+        AddRollingCoinbaseMaturityRevalidationDeployment(consensus);
 
         consensus.nMinimumChainWork = uint256{"00000000000000000000000000000000000000013e00277374c9f9eeadc70200"};
         consensus.defaultAssumeValid = uint256{"0000000000000078ed1e20cac1acf78df6d1060c78059fb6331e17141c881fc8"}; // 964264
@@ -692,6 +714,13 @@ public:
             consensus.CoinbaseMaturityLongReleaseHeight = *opts.coinbase_maturity_long_release_height;
             consensus.CoinbaseMaturityLong = consensus.CoinbaseMaturityLongReleaseHeight - consensus.CoinbaseMaturityLongStartHeight;
             AddLongCoinbaseMaturityRevalidationDeployment(consensus);
+        }
+
+        if (opts.coinbase_maturity_rolling_start_height) {
+            consensus.CoinbaseMaturityRollingStartHeight = *opts.coinbase_maturity_rolling_start_height;
+            consensus.CoinbaseMaturityRollingEnforceHeight = *opts.coinbase_maturity_rolling_enforce_height;
+            consensus.CoinbaseMaturityRolling = *opts.coinbase_maturity_rolling;
+            AddRollingCoinbaseMaturityRevalidationDeployment(consensus);
         }
 
         for (const auto& [deployment_pos, version_bits_params] : opts.version_bits_parameters) {

@@ -14,6 +14,8 @@
 #include <util/check.h>
 #include <util/moneystr.h>
 
+#include <algorithm>
+
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
 {
     if (tx.nLockTime == 0)
@@ -174,7 +176,9 @@ bool Consensus::CheckOutputSizes(const CTransaction& tx, TxValidationState& stat
 
 bool Consensus::CheckTxInputs(const CTransaction& tx, TxValidationState& state, const CCoinsViewCache& inputs, int nSpendHeight, CAmount& txfee, const CheckTxInputsRules rules,
                               const int coinbase_maturity_long,
-                              const int long_maturity_start_height)
+                              const int long_maturity_start_height,
+                              const int coinbase_maturity_rolling,
+                              const int rolling_maturity_start_height)
 {
     // are the actual inputs available?
     if (!inputs.HaveInputs(tx)) {
@@ -196,7 +200,10 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, TxValidationState& state, 
         // If prev is coinbase, check that it's matured
         if (coin.IsCoinBase()) {
             const int actual_maturity{nSpendHeight - (int)coin.nHeight};
-            const int required_maturity{(coin.nHeight >= long_maturity_start_height) ? coinbase_maturity_long : COINBASE_MATURITY};
+            int required_maturity{(coin.nHeight >= long_maturity_start_height) ? coinbase_maturity_long : COINBASE_MATURITY};
+            if ((int)coin.nHeight >= rolling_maturity_start_height) {
+                required_maturity = std::max(required_maturity, coinbase_maturity_rolling);
+            }
             if (actual_maturity < required_maturity) {
                 return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, "bad-txns-premature-spend-of-coinbase",
                     strprintf("tried to spend coinbase at depth %d", actual_maturity));

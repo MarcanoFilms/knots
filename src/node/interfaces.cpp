@@ -66,6 +66,7 @@
 
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
+#include <algorithm>
 #include <any>
 #include <memory>
 #include <optional>
@@ -90,6 +91,18 @@ namespace node {
 // All members of the classes in this namespace are intentionally public, as the
 // classes themselves are private.
 namespace {
+//! The maturity mempool policy requires for a generated coin mined at
+//! coin_height: the long maturity for every coin, raised to the rolling
+//! maturity for coins the rolling rule covers.
+int CoinbaseMaturityPolicy(const Consensus::Params& params, int coin_height)
+{
+    int maturity{params.CoinbaseMaturityLong};
+    if (coin_height >= params.CoinbaseMaturityRollingStartHeight) {
+        maturity = std::max(maturity, params.CoinbaseMaturityRolling);
+    }
+    return maturity;
+}
+
 #ifdef ENABLE_EXTERNAL_SIGNER
 class ExternalSignerImpl : public interfaces::ExternalSigner
 {
@@ -335,7 +348,7 @@ public:
         }
         return chainman().GetParams().GenesisBlock().GetBlockTime(); // Genesis block's time of current network
     }
-    int coinbaseMaturity() override { return chainman().GetConsensus().CoinbaseMaturityLong; }
+    int coinbaseMaturity(int coin_height) override { return CoinbaseMaturityPolicy(chainman().GetConsensus(), coin_height); }
     double getVerificationProgress() override
     {
         return chainman().GuessVerificationProgress(WITH_LOCK(chainman().GetMutex(), return chainman().ActiveChain().Tip()));
@@ -582,9 +595,9 @@ public:
         const CBlockIndex* block{chainman().ActiveChain()[height]};
         return block && ((block->nStatus & BLOCK_HAVE_DATA) != 0) && block->nTx > 0;
     }
-    int coinbaseMaturity() override
+    int coinbaseMaturity(int coin_height) override
     {
-        return chainman().GetConsensus().CoinbaseMaturityLong;
+        return CoinbaseMaturityPolicy(chainman().GetConsensus(), coin_height);
     }
     bool pruneLockExists(const std::string& name) const override
     {

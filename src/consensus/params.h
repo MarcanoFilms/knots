@@ -9,6 +9,7 @@
 #include <consensus/consensus.h>
 #include <uint256.h>
 
+#include <algorithm>
 #include <chrono>
 #include <limits>
 #include <map>
@@ -160,6 +161,42 @@ struct Params {
     bool CoinbaseMaturityLongActiveAt(int height) const
     {
         return height >= CoinbaseMaturityLongEnforceHeight && height < CoinbaseMaturityLongReleaseHeight;
+    }
+    /**
+     * Rolling coinbase maturity.
+     *
+     * From CoinbaseMaturityRollingEnforceHeight on, every generated coin mined
+     * at or above CoinbaseMaturityRollingStartHeight must be
+     * CoinbaseMaturityRolling blocks deep before it can be spent. Each coin is
+     * measured from its own block, so rewards unlock one per block rather than
+     * together at a shared release height.
+     *
+     * This is independent of RDTS: it is height-based, has no expiry and does
+     * not depend on RdtsExpiryTime. It only ever adds to the maturity required
+     * by the rules above, never reduces it. Unscheduled by default.
+     */
+    int CoinbaseMaturityRolling{COINBASE_MATURITY};
+    int CoinbaseMaturityRollingStartHeight{std::numeric_limits<int>::max()};
+    int CoinbaseMaturityRollingEnforceHeight{std::numeric_limits<int>::max()};
+    bool CoinbaseMaturityRollingActiveAt(int height) const
+    {
+        return height >= CoinbaseMaturityRollingEnforceHeight;
+    }
+    /**
+     * Consensus maturity a block at spend_height requires of a generated coin
+     * mined at coin_height, under all coinbase maturity rules. Validation
+     * passes the same values to Consensus::CheckTxInputs.
+     */
+    int CoinbaseMaturityRequired(int coin_height, int spend_height) const
+    {
+        int maturity{COINBASE_MATURITY};
+        if (CoinbaseMaturityLongActiveAt(spend_height) && coin_height >= CoinbaseMaturityLongStartHeight) {
+            maturity = CoinbaseMaturityLong;
+        }
+        if (CoinbaseMaturityRollingActiveAt(spend_height) && coin_height >= CoinbaseMaturityRollingStartHeight) {
+            maturity = std::max(maturity, CoinbaseMaturityRolling);
+        }
+        return maturity;
     }
     std::vector<ChainstateRevalidationDeployment> chainstate_revalidation_deployments;
     /** Don't warn about unknown BIP 9 activations below this height.

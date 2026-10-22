@@ -1087,6 +1087,9 @@ static UniValue TemplateToJSON(const Consensus::Params& consensusParams, const C
     if (pindexPrev != nullptr && consensusParams.CoinbaseMaturityLongActiveAt(pindexPrev->nHeight + 1)) {
         aRules.push_back("long_coinbase_maturity");
     }
+    if (pindexPrev != nullptr && consensusParams.CoinbaseMaturityRollingActiveAt(pindexPrev->nHeight + 1)) {
+        aRules.push_back("rolling_coinbase_maturity");
+    }
 
     result.pushKV("version", block_header.GetCompleteVersion());
     result.pushKV("rules", std::move(aRules));

@@ -174,6 +174,9 @@ public:
         std::optional<int> coinbase_maturity_long_start_height{};
         std::optional<int> coinbase_maturity_long_enforce_height{};
         std::optional<int> coinbase_maturity_long_release_height{};
+        std::optional<int> coinbase_maturity_rolling_start_height{};
+        std::optional<int> coinbase_maturity_rolling_enforce_height{};
+        std::optional<int> coinbase_maturity_rolling{};
     };
 
     static std::unique_ptr<const CChainParams> RegTest(const RegTestOptions& options);
