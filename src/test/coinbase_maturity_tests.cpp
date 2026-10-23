@@ -87,6 +87,17 @@ BOOST_AUTO_TEST_CASE(rolling_maturity_mainnet_schedule)
     BOOST_CHECK(consensus.CoinbaseMaturityRollingActiveAt(979920));
     BOOST_CHECK(consensus.CoinbaseMaturityRollingActiveAt(std::numeric_limits<int>::max() - 1));
 
+    // Coverage ends at the first zero-subsidy height (33 halvings of 210000
+    // blocks): the last covered reward is 6929999, rewards from 6930000 on
+    // keep the maturity the earlier rules require (plain COINBASE_MATURITY,
+    // the long window being long gone by then).
+    BOOST_CHECK_EQUAL(consensus.CoinbaseMaturityRollingEndCoinHeight, 33 * 210000);
+    BOOST_CHECK_EQUAL(consensus.CoinbaseMaturityRollingEndCoinHeight, 6930000);
+    BOOST_CHECK_EQUAL(consensus.CoinbaseMaturityRequired(6929999, 6929999 + 52560), 52560);
+    BOOST_CHECK_GT(consensus.CoinbaseMaturityRequired(6929999, 6929999 + COINBASE_MATURITY), COINBASE_MATURITY);
+    BOOST_CHECK_EQUAL(consensus.CoinbaseMaturityRequired(6930000, 6930000 + COINBASE_MATURITY), COINBASE_MATURITY);
+    BOOST_CHECK_EQUAL(consensus.CoinbaseMaturityRequired(7000000, 7000000 + COINBASE_MATURITY), COINBASE_MATURITY);
+
     BOOST_REQUIRE_EQUAL(consensus.chainstate_revalidation_deployments.size(), 2);
     const auto& deployment{consensus.chainstate_revalidation_deployments.back()};
     BOOST_CHECK_EQUAL(deployment.name, "rolling_coinbase_maturity_1y");
@@ -107,6 +118,14 @@ BOOST_AUTO_TEST_CASE(rolling_maturity_mainnet_schedule)
     BOOST_CHECK_EQUAL(regtest->GetConsensus().CoinbaseMaturityRolling, 150);
     BOOST_CHECK(!regtest->GetConsensus().CoinbaseMaturityRollingActiveAt(19));
     BOOST_CHECK(regtest->GetConsensus().CoinbaseMaturityRollingActiveAt(20));
+    // Without an explicit end the coverage never ends.
+    BOOST_CHECK_EQUAL(regtest->GetConsensus().CoinbaseMaturityRollingEndCoinHeight, std::numeric_limits<int>::max());
+
+    options.coinbase_maturity_rolling_end = 40;
+    const auto regtest_end{CChainParams::RegTest(options)};
+    BOOST_CHECK_EQUAL(regtest_end->GetConsensus().CoinbaseMaturityRollingEndCoinHeight, 40);
+    BOOST_CHECK_EQUAL(regtest_end->GetConsensus().CoinbaseMaturityRequired(39, 39 + 150), 150);
+    BOOST_CHECK_EQUAL(regtest_end->GetConsensus().CoinbaseMaturityRequired(40, 40 + COINBASE_MATURITY), COINBASE_MATURITY);
 }
 
 namespace {
@@ -200,7 +219,7 @@ BOOST_AUTO_TEST_CASE(rolling_maturity_check_tx_inputs)
     CCoinsView base;
     CCoinsViewCache view{&base};
 
-    const auto spend_at{[&](int coin_height, int spend_height, int long_start) {
+    const auto spend_at{[&](int coin_height, int spend_height, int long_start, int rolling_end = std::numeric_limits<int>::max()) {
         CMutableTransaction cb;
         cb.vin.resize(1);
         cb.vin[0].prevout.SetNull();
@@ -217,7 +236,7 @@ BOOST_AUTO_TEST_CASE(rolling_maturity_check_tx_inputs)
         TxValidationState state;
         CAmount fee;
         return Consensus::CheckTxInputs(CTransaction{spend}, state, view, spend_height, fee, CheckTxInputsRules::None,
-                                        LONG, long_start, ROLLING, ROLLING_START);
+                                        LONG, long_start, ROLLING, ROLLING_START, rolling_end);
     }};
 
     // Before the rolling start height: only the existing rules.
@@ -235,6 +254,15 @@ BOOST_AUTO_TEST_CASE(rolling_maturity_check_tx_inputs)
     // When the long rule also covers the coin, the longer of the two applies.
     BOOST_CHECK(!spend_at(ROLLING_START + 7, ROLLING_START + 7 + LONG, 0));
     BOOST_CHECK(spend_at(ROLLING_START + 8, ROLLING_START + 8 + ROLLING, 0));
+
+    // With an end coin height, the reward mined just below it stays covered
+    // while the one mined at it keeps only the earlier rules.
+    constexpr int ROLLING_END{ROLLING_START + 100};
+    BOOST_CHECK(!spend_at(ROLLING_END - 1, ROLLING_END - 1 + ROLLING - 1, std::numeric_limits<int>::max(), ROLLING_END));
+    BOOST_CHECK(spend_at(ROLLING_END - 1, ROLLING_END - 1 + ROLLING, std::numeric_limits<int>::max(), ROLLING_END));
+    BOOST_CHECK(spend_at(ROLLING_END, ROLLING_END + COINBASE_MATURITY, std::numeric_limits<int>::max(), ROLLING_END));
+    BOOST_CHECK(!spend_at(ROLLING_END + 1, ROLLING_END + 1 + LONG - 1, 0, ROLLING_END));
+    BOOST_CHECK(spend_at(ROLLING_END + 2, ROLLING_END + 2 + LONG, 0, ROLLING_END));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

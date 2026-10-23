@@ -166,6 +166,8 @@ public:
         consensus.CoinbaseMaturityRollingStartHeight = consensus.CoinbaseMaturityLongStartHeight;
         consensus.CoinbaseMaturityRollingEnforceHeight = consensus.CoinbaseMaturityLongReleaseHeight;
         consensus.CoinbaseMaturityRolling = 52560;
+        // first zero-subsidy height (33 halvings), so the rule retires together with issuance
+        consensus.CoinbaseMaturityRollingEndCoinHeight = 6930000;
         AddRollingCoinbaseMaturityRevalidationDeployment(consensus);
 
         consensus.nMinimumChainWork = uint256{"00000000000000000000000000000000000000013e00277374c9f9eeadc70200"};
@@ -720,6 +722,9 @@ public:
             consensus.CoinbaseMaturityRollingStartHeight = *opts.coinbase_maturity_rolling_start_height;
             consensus.CoinbaseMaturityRollingEnforceHeight = *opts.coinbase_maturity_rolling_enforce_height;
             consensus.CoinbaseMaturityRolling = *opts.coinbase_maturity_rolling;
+            if (opts.coinbase_maturity_rolling_end) {
+                consensus.CoinbaseMaturityRollingEndCoinHeight = *opts.coinbase_maturity_rolling_end;
+            }
             AddRollingCoinbaseMaturityRevalidationDeployment(consensus);
         }
 

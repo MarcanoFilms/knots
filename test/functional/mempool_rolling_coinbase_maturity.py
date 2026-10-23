@@ -105,11 +105,13 @@ class RollingCoinbaseMaturityTest(BitcoinTestFramework):
         self.stop_node(0)
         for args, msg in [
             (["-testcoinbasematurityrolling=150:200"], "Invalid format"),
-            (["-testcoinbasematurityrolling=1:2:3:4"], "Invalid format"),
+            (["-testcoinbasematurityrolling=1:2:3:4:5"], "Invalid format"),
             (["-testcoinbasematurityrolling=-1:200:200"], "Invalid start height"),
             (["-testcoinbasematurityrolling=99999999999999999999:200:200"], "Invalid start height"),
             (["-testcoinbasematurityrolling=150:1:200"], "Invalid enforce height"),
             ([f"-testcoinbasematurityrolling=150:200:{COINBASE_MATURITY}"], "Invalid maturity"),
+            (["-testcoinbasematurityrolling=150:200:200:150"], "Invalid end coin height"),
+            (["-testcoinbasematurityrolling=150:200:200:149"], "Invalid end coin height"),
         ]:
             node.assert_start_raises_init_error(extra_args=args, expected_msg=msg, match=ErrorMatch.PARTIAL_REGEX)
         self.start_node(0, extra_args=self.extra_args[0].copy())

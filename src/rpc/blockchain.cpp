@@ -1913,6 +1913,7 @@ const std::vector<RPCResult> RPCHelpForDeployment{
     {RPCResult::Type::NUM, "height", /*optional=*/true, "height of the first block which enforces the rules (only for \"buried\" and \"flagday\" types, or \"bip9\" type with \"active\" status)"},
     {RPCResult::Type::NUM, "height_end", /*optional=*/true, "height of the last block which enforces the rules (only for temporary deployments)"},
     {RPCResult::Type::NUM, "coinbase_start_height", /*optional=*/true, "height of the first generated coin covered by the long or rolling coinbase maturity rule (only for \"long_coinbase_maturity\" and \"rolling_coinbase_maturity\")"},
+    {RPCResult::Type::NUM, "coinbase_end_height", /*optional=*/true, "height of the last generated coin covered by the rolling coinbase maturity rule (only for \"rolling_coinbase_maturity\", and only if the coverage ends)"},
     {RPCResult::Type::NUM, "maturity", /*optional=*/true, "required coinbase maturity depth for covered generated coins (only for \"long_coinbase_maturity\" and \"rolling_coinbase_maturity\")"},
     {RPCResult::Type::BOOL, "active", "true if the consensus rules are enforced for the next block (policy may enforce related rules independently of this flag)"},
     {RPCResult::Type::NUM_TIME, "expiry_time", /*optional=*/true, "median time past at and after which the rules are no longer enforced (only for \"flagday\" type; a block is past expiry when its parent's median time past has reached this value)"},
@@ -1985,6 +1986,9 @@ void RollingCoinbaseMaturityDescPushBack(const CBlockIndex* blockindex, UniValue
     rv.pushKV("type", "flagday");
     rv.pushKV("height", params.CoinbaseMaturityRollingEnforceHeight);
     rv.pushKV("coinbase_start_height", params.CoinbaseMaturityRollingStartHeight);
+    if (params.CoinbaseMaturityRollingEndCoinHeight != std::numeric_limits<int>::max()) {
+        rv.pushKV("coinbase_end_height", params.CoinbaseMaturityRollingEndCoinHeight - 1);
+    }
     rv.pushKV("maturity", params.CoinbaseMaturityRolling);
     rv.pushKV("active", params.CoinbaseMaturityRollingActiveAt(blockindex->nHeight + 1));
     softforks.pushKV("rolling_coinbase_maturity", std::move(rv));

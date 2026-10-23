@@ -62,13 +62,17 @@ bool CheckOutputSizes(const CTransaction& tx, TxValidationState& state);
  *                                      only ever applied as a minimum on top of the rules above.
  * @param[in] rolling_maturity_start_height First coinbase height requiring coinbase_maturity_rolling,
  *                                         or std::numeric_limits<int>::max() to disable.
+ * @param[in] rolling_maturity_end_coin_height First coinbase height no longer requiring
+ *                                             coinbase_maturity_rolling, or
+ *                                             std::numeric_limits<int>::max() for no end.
  * Preconditions: tx.IsCoinBase() is false.
  */
 [[nodiscard]] bool CheckTxInputs(const CTransaction& tx, TxValidationState& state, const CCoinsViewCache& inputs, int nSpendHeight, CAmount& txfee, CheckTxInputsRules rules,
                                  int coinbase_maturity_long,
                                  int long_maturity_start_height,
                                  int coinbase_maturity_rolling = COINBASE_MATURITY,
-                                 int rolling_maturity_start_height = std::numeric_limits<int>::max());
+                                 int rolling_maturity_start_height = std::numeric_limits<int>::max(),
+                                 int rolling_maturity_end_coin_height = std::numeric_limits<int>::max());
 } // namespace Consensus
 
 /** Auxiliary functions for transaction validation (ideally should not be exposed) */

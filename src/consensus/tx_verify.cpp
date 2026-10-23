@@ -178,7 +178,8 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, TxValidationState& state, 
                               const int coinbase_maturity_long,
                               const int long_maturity_start_height,
                               const int coinbase_maturity_rolling,
-                              const int rolling_maturity_start_height)
+                              const int rolling_maturity_start_height,
+                              const int rolling_maturity_end_coin_height)
 {
     // are the actual inputs available?
     if (!inputs.HaveInputs(tx)) {
@@ -201,7 +202,7 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, TxValidationState& state, 
         if (coin.IsCoinBase()) {
             const int actual_maturity{nSpendHeight - (int)coin.nHeight};
             int required_maturity{(coin.nHeight >= long_maturity_start_height) ? coinbase_maturity_long : COINBASE_MATURITY};
-            if ((int)coin.nHeight >= rolling_maturity_start_height) {
+            if ((int)coin.nHeight >= rolling_maturity_start_height && (int)coin.nHeight < rolling_maturity_end_coin_height) {
                 required_maturity = std::max(required_maturity, coinbase_maturity_rolling);
             }
             if (actual_maturity < required_maturity) {
