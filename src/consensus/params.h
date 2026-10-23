@@ -174,10 +174,16 @@ struct Params {
      * This is independent of RDTS: it is height-based, has no expiry and does
      * not depend on RdtsExpiryTime. It only ever adds to the maturity required
      * by the rules above, never reduces it. Unscheduled by default.
+     *
+     * Coins mined at or above CoinbaseMaturityRollingEndCoinHeight are not
+     * covered: they keep the maturity required by the rules above. This bounds
+     * the coverage (e.g. at the first zero-subsidy height, where there is no
+     * subsidy left to protect) without ever releasing a covered coin early.
      */
     int CoinbaseMaturityRolling{COINBASE_MATURITY};
     int CoinbaseMaturityRollingStartHeight{std::numeric_limits<int>::max()};
     int CoinbaseMaturityRollingEnforceHeight{std::numeric_limits<int>::max()};
+    int CoinbaseMaturityRollingEndCoinHeight{std::numeric_limits<int>::max()};
     bool CoinbaseMaturityRollingActiveAt(int height) const
     {
         return height >= CoinbaseMaturityRollingEnforceHeight;
@@ -193,7 +199,7 @@ struct Params {
         if (CoinbaseMaturityLongActiveAt(spend_height) && coin_height >= CoinbaseMaturityLongStartHeight) {
             maturity = CoinbaseMaturityLong;
         }
-        if (CoinbaseMaturityRollingActiveAt(spend_height) && coin_height >= CoinbaseMaturityRollingStartHeight) {
+        if (CoinbaseMaturityRollingActiveAt(spend_height) && coin_height >= CoinbaseMaturityRollingStartHeight && coin_height < CoinbaseMaturityRollingEndCoinHeight) {
             maturity = std::max(maturity, CoinbaseMaturityRolling);
         }
         return maturity;

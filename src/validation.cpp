@@ -445,6 +445,7 @@ void Chainstate::MaybeUpdateMempoolForReorg(
                 }
                 if (coin.IsCoinBase() && consensusParams.CoinbaseMaturityRollingActiveAt(mempool_spend_height) &&
                     (int)coin.nHeight >= consensusParams.CoinbaseMaturityRollingStartHeight &&
+                    (int)coin.nHeight < consensusParams.CoinbaseMaturityRollingEndCoinHeight &&
                     mempool_spend_height - coin.nHeight < consensusParams.CoinbaseMaturityRolling) {
                     return true;
                 }
@@ -1027,7 +1028,8 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
                                   consensusParams.CoinbaseMaturityLong,
                                   /*long_maturity_start_height=*/ 0,
                                   consensusParams.CoinbaseMaturityRolling,
-                                  consensusParams.CoinbaseMaturityRollingActiveAt(block_height_next) ? consensusParams.CoinbaseMaturityRollingStartHeight : std::numeric_limits<int>::max())) {
+                                  consensusParams.CoinbaseMaturityRollingActiveAt(block_height_next) ? consensusParams.CoinbaseMaturityRollingStartHeight : std::numeric_limits<int>::max(),
+                                  consensusParams.CoinbaseMaturityRollingEndCoinHeight)) {
         return false; // state filled in by CheckTxInputs
     }
 
@@ -3041,7 +3043,8 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
                                           consensusParams.CoinbaseMaturityLong,
                                           long_maturity_start_height,
                                           consensusParams.CoinbaseMaturityRolling,
-                                          rolling_maturity_start_height)) {
+                                          rolling_maturity_start_height,
+                                          consensusParams.CoinbaseMaturityRollingEndCoinHeight)) {
                 // Any transaction validation failure in ConnectBlock is a block consensus failure
                 state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
                               tx_state.GetRejectReason(),
