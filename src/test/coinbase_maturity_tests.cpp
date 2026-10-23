@@ -207,6 +207,53 @@ BOOST_AUTO_TEST_CASE(rolling_maturity_independent_of_rdts)
     }
 }
 
+BOOST_AUTO_TEST_CASE(rolling_maturity_clean_activation_after_release)
+{
+    // An enforce height A is "clean" when no covered reward was ever
+    // spendable under the earlier rules before A, which holds whenever
+    // A <= StartHeight + required_prior: enforcement then only extends
+    // maturities that are still pending and never re-locks a coin some
+    // node may already have seen spent.
+    //
+    // Mainnet mapping for an enforce height after 979920: if the shipped
+    // interim rule is the rolling-180d maturity (25920 blocks), the bound
+    // is enforce < 979919 + 25920 = 1005839; if the shipped interim rule
+    // is the freeze-by-RDTS-expiry, covered rewards stay locked until the
+    // expiry, so any enforce height before it is clean.
+    Consensus::Params params;
+    params.CoinbaseMaturityLongStartHeight = 200;
+    params.CoinbaseMaturityLongEnforceHeight = 200;
+    params.CoinbaseMaturityLongReleaseHeight = 300;
+    params.CoinbaseMaturityLong = params.CoinbaseMaturityLongReleaseHeight - params.CoinbaseMaturityLongStartHeight;
+    params.CoinbaseMaturityRollingStartHeight = 200;
+    params.CoinbaseMaturityRollingEnforceHeight = 290;
+    params.CoinbaseMaturityRolling = 500;
+    params.CoinbaseMaturityRollingEndCoinHeight = 10000;
+
+    const int A{params.CoinbaseMaturityRollingEnforceHeight};
+    // The clean-activation precondition: every covered reward mined before A
+    // still needs at least A - StartHeight blocks under the earlier rules.
+    BOOST_CHECK_LE(A, params.CoinbaseMaturityLongStartHeight + params.CoinbaseMaturityLong);
+
+    for (int coin_height{params.CoinbaseMaturityRollingStartHeight}; coin_height < A; ++coin_height) {
+        // Before A no covered reward was ever spendable: the earlier rules
+        // alone already required more depth than any pre-A block offers.
+        for (int spend_height{coin_height + 1}; spend_height < A; ++spend_height) {
+            BOOST_CHECK_GT(params.CoinbaseMaturityRequired(coin_height, spend_height), spend_height - coin_height);
+        }
+        // From A on the requirement is the larger of the earlier rules and
+        // the rolling depth; with the rolling depth dominating here, exactly
+        // the rolling depth.
+        for (const int spend_height : {A, A + 1, coin_height + 499, coin_height + 500, coin_height + 5000}) {
+            if (spend_height < A) continue;
+            Consensus::Params prior{params};
+            prior.CoinbaseMaturityRollingEnforceHeight = std::numeric_limits<int>::max();
+            BOOST_CHECK_EQUAL(params.CoinbaseMaturityRequired(coin_height, spend_height),
+                              std::max(prior.CoinbaseMaturityRequired(coin_height, spend_height), params.CoinbaseMaturityRolling));
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(rolling_maturity_check_tx_inputs)
 {
     // Each covered reward needs the full rolling depth from its own block;
