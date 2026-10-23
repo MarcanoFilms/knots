@@ -93,11 +93,12 @@ namespace node {
 namespace {
 //! The maturity mempool policy requires for a generated coin mined at
 //! coin_height: the long maturity for every coin, raised to the rolling
-//! maturity for coins the rolling rule covers.
+//! maturity for coins the rolling rule covers (mined at or above its start
+//! height and below its end coin height).
 int CoinbaseMaturityPolicy(const Consensus::Params& params, int coin_height)
 {
     int maturity{params.CoinbaseMaturityLong};
-    if (coin_height >= params.CoinbaseMaturityRollingStartHeight) {
+    if (coin_height >= params.CoinbaseMaturityRollingStartHeight && coin_height < params.CoinbaseMaturityRollingEndCoinHeight) {
         maturity = std::max(maturity, params.CoinbaseMaturityRolling);
     }
     return maturity;
